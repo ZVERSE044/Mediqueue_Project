@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediQueue | Integrated Hospital Management System</title>
+  <link rel="stylesheet" href="css/style2.css">
+</head>
+<body>
+  <div id="toast" class="toast"></div>
+  <section id="roleScreen" class="role-screen">
+    <div class="role-card">
+      <div class="brand-mark">+</div>
+      <p class="eyebrow">Integrated Hospital Management System</p>
+      <h1>Medi<span>Queue</span></h1>
+      <p class="role-subtitle">Patient Flow • Bed Availability • Medication Safety</p>
+      <h2>Choose your role</h2>
+      <div class="role-grid">
+        <button class="role-option" data-role="patient">
+          <span class="role-icon">👤</span>
+          <strong>Patient</strong>
+          <small>Appointments, tokens & queue status</small>
+        </button>
+        <button class="role-option" data-role="doctor">
+          <span class="role-icon">🩺</span>
+          <strong>Doctor</strong>
+          <small>Patients, prescriptions & queue</small>
+        </button>
+        <button class="role-option" data-role="pharmacist">
+          <span class="role-icon">💊</span>
+          <strong>Pharmacist</strong>
+          <small>Prescription & medication safety</small>
+        </button>
+        <button class="role-option" data-role="nurse">
+          <span class="role-icon">🧑‍⚕️</span>
+          <strong>Nurse</strong>
+          <small>Medication administration</small>
+        </button>
+        <button class="role-option" data-role="admin">
+          <span class="role-icon">🏥</span>
+          <strong>Hospital Admin</strong>
+          <small>Beds, departments & analytics</small>
+        </button>
+      </div>
+      <p class="demo-note">Frontend demo • Data is stored locally in your browser.</p>
+    </div>
+  </section>
+
+  <div id="app" class="app hidden">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark small">+</div>
+        <div><strong>MediQueue</strong><small>Hospital System</small></div>
+      </div>
+      <div class="user-badge">
+        <div id="userAvatar" class="avatar">P</div>
+        <div><strong id="userName">User</strong><span id="userRole">Patient</span></div>
+      </div>
+      <nav id="mainNav"></nav>
+      <button id="switchRole" class="switch-role">⇄ Switch Role</button>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button id="mobileMenu" class="icon-btn">☰</button>
+        <div>
+          <p class="eyebrow" id="pageEyebrow">Dashboard</p>
+          <h2 id="pageTitle">Overview</h2>
+        </div>
+        <div class="top-actions">
+          <div class="live-dot"><i></i> System Live</div>
+          <button id="notificationBtn" class="icon-btn">🔔</button>
+        </div>
+      </header>
+
+      <section id="content" class="content"></section>
+    </main>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    /*
+ * MediQueue Symptom Assistant - floating widget
+ */
+(function () {
+  if (window.__symAssistantLoaded) return;
+  window.__symAssistantLoaded = true;
+
+  var SYMPTOMS = {
+    fever:"Fever", cough:"Cough", sore_throat:"Sore throat", runny_nose:"Runny or blocked nose", headache:"Headache",
+    body_ache:"Body ache", fatigue:"Tiredness", nausea:"Nausea", vomiting:"Vomiting", diarrhea:"Loose motions",
+    stomach_pain:"Stomach pain", rash:"Skin rash", burning_urine:"Burning while urinating", thirst:"Excess thirst",
+    frequent_urine:"Frequent urination", sneezing:"Sneezing or itchy eyes", wheeze:"Wheezing", joint_pain:"Joint pain",
+    chills:"Chills", loss_smell:"Loss of smell or taste"
+  };
+  var FLAGS = {
+    chest_pain:"Chest pain or pressure", breathless:"Severe difficulty breathing", faint:"Fainting or confusion",
+    stroke:"Face drooping, slurred speech or arm weakness", bleeding:"Heavy bleeding", stiff_neck:"Stiff neck with high fever",
+    blood_stool:"Blood in vomit or stool", seizure:"Seizure"
+  };
+  var CONDS = [
+    {n:"Common cold", u:1, s:{runny_nose:3,sore_throat:2,cough:2,sneezing:1,headache:1,fatigue:1}, tip:"Rest, fluids and warm drinks usually help. See a doctor if it lasts more than a week."},
+    {n:"Influenza (flu)", u:2, s:{fever:3,body_ache:3,chills:2,cough:2,fatigue:2,headache:2,sore_throat:1}, tip:"Rest and fluids. See a doctor if fever stays above 3 days or breathing feels heavy."},
+    {n:"COVID-19 or similar viral infection", u:2, s:{fever:2,cough:2,loss_smell:3,fatigue:2,body_ache:1,sore_throat:1}, tip:"Consider a test, avoid contact with others, and monitor breathing."},
+    {n:"Seasonal allergy", u:1, s:{sneezing:3,runny_nose:2,cough:1,headache:1}, tip:"Avoid triggers like dust and pollen. A doctor or pharmacist can suggest antihistamines."},
+    {n:"Gastroenteritis (stomach infection)", u:2, s:{vomiting:3,diarrhea:3,stomach_pain:2,nausea:2,fever:1,fatigue:1}, tip:"Drink ORS and fluids. See a doctor if you cannot keep fluids down or it lasts over 2 days."},
+    {n:"Urinary tract infection", u:2, s:{burning_urine:3,frequent_urine:2,stomach_pain:1,fever:1}, tip:"Needs a urine test and often antibiotics, so book a doctor visit."},
+    {n:"Migraine or tension headache", u:1, s:{headache:3,nausea:2,fatigue:1}, tip:"Rest in a dark, quiet room. See a doctor if headaches are frequent or getting worse."},
+    {n:"Dengue or malaria (fever with body pain)", u:3, s:{fever:3,chills:2,headache:2,body_ache:2,joint_pain:2,rash:1,nausea:1,fatigue:1}, tip:"High fever with body pain needs a blood test. Do not delay, especially in monsoon season."},
+    {n:"Asthma flare-up", u:3, s:{wheeze:3,cough:2,fatigue:1}, tip:"Use your prescribed inhaler if you have one. Get medical help if it does not settle."},
+    {n:"Possible diabetes symptoms", u:2, s:{thirst:3,frequent_urine:3,fatigue:2}, tip:"A simple blood sugar test can confirm this. Book a doctor visit."},
+    {n:"Skin allergy or viral rash", u:1, s:{rash:3,fever:1,sneezing:1}, tip:"Avoid scratching and new products. See a doctor if it spreads or you have fever."},
+    {n:"Food poisoning or acidity", u:1, s:{stomach_pain:3,nausea:2,vomiting:2,diarrhea:1}, tip:"Eat light food and drink fluids. See a doctor if pain is severe or lasts long."}
+  ];
+
+  // Sirf common OTC (bina prescription) options. Dose jaan-bujh ke nahi diya gaya.
+  var MEDS = {
+    "Common cold": ["Paracetamol (e.g. Dolo, Crocin) for fever or body ache","Cetirizine for runny nose or sneezing","Saline nasal drops","Throat lozenges"],
+    "Influenza (flu)": ["Paracetamol (e.g. Dolo, Crocin) for fever and body ache","Salt-water gargle","ORS or fluids to stay hydrated"],
+    "COVID-19 or similar viral infection": ["Paracetamol for fever or body ache","ORS or fluids to stay hydrated"],
+    "Seasonal allergy": ["Cetirizine or Levocetirizine","Saline nasal spray"],
+    "Gastroenteritis (stomach infection)": ["ORS (e.g. Electral) after every loose motion","Probiotic or curd"],
+    "Migraine or tension headache": ["Paracetamol (e.g. Dolo, Crocin)"],
+    "Skin allergy or viral rash": ["Calamine lotion for itching","Cetirizine"],
+    "Food poisoning or acidity": ["ORS if you have loose motions or vomiting","Antacid syrup or tablet (e.g. Digene, Gelusil)"]
+  };
+  var NO_MEDS = {
+    "Urinary tract infection": "Drink plenty of water. UTI usually needs a urine test and a prescribed antibiotic, so do not self-medicate.",
+    "Asthma flare-up": "Use only the inhaler prescribed to you. Do not try other medicines on your own.",
+    "Possible diabetes symptoms": "No home medicine. Get a blood sugar test first.",
+    "Dengue or malaria (fever with body pain)": "Do not take aspirin, ibuprofen or diclofenac until a doctor has tested you for dengue. Paracetamol is the usual choice, but get checked first."
+  };
+
+  var CSS = [
+    ":host{all:initial}",
+    "*{box-sizing:border-box;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}",
+    ".fab{position:fixed;right:20px;bottom:20px;width:58px;height:58px;border-radius:50%;border:0;background:#0E6B75;color:#fff;cursor:pointer;box-shadow:0 6px 18px rgba(14,107,117,.45);display:flex;align-items:center;justify-content:center;z-index:2147483000}",
+    ".fab:hover{background:#0B565F}",
+    ".fab:focus-visible,.chip:focus-visible,.go:focus-visible,.x:focus-visible,select:focus-visible{outline:3px solid #F2B705;outline-offset:2px}",
+    ".fab svg{width:28px;height:28px}",
+    ".tip{position:fixed;right:88px;bottom:32px;background:#12303A;color:#fff;font-size:13px;padding:6px 10px;border-radius:8px;z-index:2147483000;pointer-events:none;opacity:0;transition:opacity .2s}",
+    ".fab:hover+.tip,.fab:focus-visible+.tip{opacity:1}",
+    ".panel{position:fixed;right:20px;bottom:90px;width:380px;max-width:calc(100vw - 24px);height:min(640px,calc(100vh - 110px));background:#fff;color:#12303A;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.28);display:none;flex-direction:column;overflow:hidden;z-index:2147483000}",
+    ".panel.open{display:flex}",
+    "@media(max-width:520px){.panel{right:0;bottom:0;width:100vw;max-width:100vw;height:100vh;border-radius:0}.fab{right:14px;bottom:14px}}",
+    ".hd{background:#0E6B75;color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center}",
+    ".hd b{font-size:16px}.hd small{display:block;font-size:12px;opacity:.85}",
+    ".x{background:none;border:0;color:#fff;font-size:26px;line-height:1;cursor:pointer;padding:0 4px}",
+    ".bd{padding:14px 16px;overflow-y:auto;flex:1;font-size:14px;line-height:1.5}",
+    ".note{background:#DDF0F1;border-left:4px solid #0E6B75;padding:8px 10px;border-radius:0 8px 8px 0;font-size:12.5px;margin-bottom:12px}",
+    "h4{margin:12px 0 2px;font-size:14px}.sub{color:#5B747C;font-size:12.5px;margin:0 0 8px}",
+    ".row{display:flex;gap:8px;margin-bottom:6px}.row label{flex:1;font-size:12px;color:#5B747C}",
+    "select{width:100%;margin-top:3px;padding:7px;border:1px solid #C9DADD;border-radius:8px;font-size:14px;background:#fff;color:#12303A}",
+    ".chips{display:flex;flex-wrap:wrap;gap:6px}",
+    ".chip{border:1px solid #C9DADD;background:#F2F7F7;color:#12303A;padding:6px 11px;border-radius:999px;font-size:13px;cursor:pointer}",
+    ".chip[aria-pressed=true]{background:#0E6B75;border-color:#0E6B75;color:#fff;font-weight:600}",
+    ".chip.rf[aria-pressed=true]{background:#B3261E;border-color:#B3261E}",
+    ".ft{padding:12px 16px;border-top:1px solid #E1ECEE;display:flex;gap:8px}",
+    ".go{flex:1;padding:11px;border:0;border-radius:10px;background:#0E6B75;color:#fff;font-weight:700;font-size:14px;cursor:pointer}",
+    ".go:disabled{opacity:.45;cursor:not-allowed}",
+    ".sec{background:#fff;color:#0E6B75;border:1px solid #0E6B75}",
+    ".ban{border-radius:12px;padding:12px 14px;margin-bottom:12px}.ban h3{margin:0 0 3px;font-size:16px}.ban p{margin:0}",
+    ".e{background:#FCE8E6;color:#B3261E;border:1px solid #B3261E}.d{background:#FFF1D6;color:#8A5A00;border:1px solid #8A5A00}.h{background:#E1F3E7;color:#1E6B3A;border:1px solid #1E6B3A}",
+    ".cond{border-top:1px solid #E1ECEE;padding:10px 0}.top{display:flex;justify-content:space-between;font-weight:600}",
+    ".bar{height:6px;background:#E1ECEE;border-radius:4px;margin:5px 0;overflow:hidden}.bar i{display:block;height:100%;background:#0E6B75}",
+    ".why{font-size:12.5px;color:#5B747C}",
+    ".med{background:#F2F7F7;border:1px solid #C9DADD;border-radius:12px;padding:10px 12px;margin-top:12px}.med h4{margin:0 0 4px}.med ul{margin:4px 0 6px;padding-left:18px}.med li{margin:2px 0}.med .warn{font-size:12px;color:#8A5A00;margin:6px 0 0}",
+    ".link{display:inline-block;margin-top:8px;color:#0E6B75;font-weight:600;font-size:13px}"
+  ].join("\n");
+
+  var host = document.createElement("div");
+  host.id = "mq-symptom-assistant";
+  document.body.appendChild(host);
+  var root = host.attachShadow({ mode: "open" });
+
+  root.innerHTML =
+    "<style>" + CSS + "</style>" +
+    "<button class='fab' aria-label='Open symptom assistant' aria-expanded='false'>" +
+      "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 3v6a4 4 0 0 0 8 0V3'/><path d='M10 13v2a5 5 0 0 0 10 0v-1'/><circle cx='20' cy='11' r='2'/></svg>" +
+    "</button><div class='tip'>Symptom assistant</div>" +
+    "<div class='panel' role='dialog' aria-label='Symptom assistant'>" +
+      "<div class='hd'><div><b>Symptom assistant</b><small>MediQueue</small></div><button class='x' aria-label='Close'>&times;</button></div>" +
+      "<div class='bd'></div>" +
+      "<div class='ft'><button class='go' disabled>Check symptoms</button></div>" +
+    "</div>";
+
+  var fab = root.querySelector(".fab"), panel = root.querySelector(".panel"),
+      bd = root.querySelector(".bd"), go = root.querySelector(".go");
+  var sel = {}, flg = {};
+
+  function chips(items, store, cls) {
+    return Object.keys(items).map(function (k) {
+      return "<button type='button' class='chip " + cls + "' data-k='" + k + "' data-s='" + (cls ? "f" : "s") + "' aria-pressed='" + (store[k] ? "true" : "false") + "'>" + items[k] + "</button>";
+    }).join("");
+  }
+
+  function form() {
+    sel = {}; flg = {}; go.textContent = "Check symptoms"; go.disabled = true; go.onclick = analyse;
+    bd.innerHTML =
+      "<div class='note'>Informational tool only. Not a diagnosis or medical advice.</div>" +
+      "<div class='row'><label>Age group<select id='age'><option value='adult'>18 to 59</option><option value='child'>Under 18</option><option value='senior'>60 or above</option></select></label>" +
+      "<label>Symptoms since<select id='dur'><option value='1'>Under 1 day</option><option value='3'>1 to 3 days</option><option value='7'>4 to 7 days</option><option value='14'>Over a week</option></select></label></div>" +
+      "<h4>Symptoms</h4><p class='sub'>Tap all that apply.</p><div class='chips'>" + chips(SYMPTOMS, sel, "") + "</div>" +
+      "<h4>Warning signs</h4><p class='sub'>Tap only if you have these right now.</p><div class='chips'>" + chips(FLAGS, flg, "rf") + "</div>";
+    bd.scrollTop = 0;
+  }
+
+  bd.addEventListener("click", function (e) {
+    var b = e.target.closest(".chip"); if (!b) return;
+    var store = b.dataset.s === "f" ? flg : sel, k = b.dataset.k;
+    store[k] = !store[k]; b.setAttribute("aria-pressed", store[k] ? "true" : "false");
+    go.disabled = !(Object.keys(sel).some(function (x) { return sel[x]; }) || Object.keys(flg).some(function (x) { return flg[x]; }));
+  });
+
+  function done(html) {
+    bd.innerHTML = html; bd.scrollTop = 0;
+    go.textContent = "Start over"; go.disabled = false; go.onclick = form;
+  }
+
+  function analyse() {
+    var age = bd.querySelector("#age").value, dur = +bd.querySelector("#dur").value;
+    var S = Object.keys(sel).filter(function (k) { return sel[k]; });
+    var F = Object.keys(flg).filter(function (k) { return flg[k]; });
+    var note = "<div class='note'>Informational tool only. Not a diagnosis or medical advice.</div>";
+
+    if (F.length) { // safety layer runs first and overrides everything
+      return done(note + "<div class='ban e'><h3>Get urgent medical help now</h3><p>You reported: " +
+        F.map(function (k) { return FLAGS[k]; }).join(", ") +
+        ". These can be signs of a serious problem. Call 112 or 108, or go to the nearest hospital immediately.</p></div>");
+    }
+    var scored = CONDS.map(function (c) {
+      var keys = Object.keys(c.s), total = keys.reduce(function (a, k) { return a + c.s[k]; }, 0);
+      var hit = keys.filter(function (k) { return S.indexOf(k) > -1; });
+      var got = hit.reduce(function (a, k) { return a + c.s[k]; }, 0);
+      var extra = S.filter(function (k) { return !(k in c.s); }).length;
+      return { c: c, hit: hit, score: Math.max(0, got / total - 0.04 * extra) };
+    }).filter(function (r) { return r.hit.length; }).sort(function (a, b) { return b.score - a.score; }).slice(0, 3);
+
+    var u = scored.length ? Math.max.apply(null, scored.map(function (r) { return r.c.u; })) : 1;
+    if (age !== "adult" && u < 2 && S.indexOf("fever") > -1) u = 2;
+    if (dur >= 7) u = Math.max(u, 2);
+    if (S.indexOf("fever") > -1 && S.length >= 4 && u < 2) u = 2;
+
+    var bn = u >= 3 ? ["e", "See a doctor today", "Some matching conditions need a test or prompt treatment. Visit a clinic or hospital within 24 hours."]
+           : u === 2 ? ["d", "Book a doctor visit soon", "Plan to see a doctor in the next 1 to 2 days, sooner if symptoms worsen."]
+           : ["h", "Home care is likely fine", "Rest, fluids and watching your symptoms is usually enough. See a doctor if things worsen or last over a week."];
+
+    var html = note + "<div class='ban " + bn[0] + "'><h3>" + bn[1] + "</h3><p>" + bn[2] + "</p></div>";
+    if (!scored.length) html += "<p class='why'>No close match in this small knowledge base. Please consult a doctor if you are worried.</p>";
+    else {
+      html += "<h4>Possible causes</h4><p class='sub'>Ranked by symptom fit. Not diagnoses.</p>";
+      scored.forEach(function (r) {
+        var p = Math.round(Math.min(r.score, 1) * 100);
+        html += "<div class='cond'><div class='top'><span>" + r.c.n + "</span><span>" + p + "%</span></div><div class='bar'><i style='width:" + p + "%'></i></div>" +
+          "<div class='why'>Matched: " + r.hit.map(function (k) { return SYMPTOMS[k]; }).join(", ") + "</div><div class='why' style='margin-top:3px'>" + r.c.tip + "</div></div>";
+      });
+    }
+    // Common medicine suggestions (sirf low-urgency + adult ke liye)
+    var cautionNote = "Check with a pharmacist or doctor first if you are pregnant, breastfeeding, allergic to any medicine, take other medicines, or have liver, kidney or stomach problems. Follow the dose on the label or your doctor's advice.";
+    var noMed = scored.filter(function (r) { return NO_MEDS[r.c.n]; }).map(function (r) { return NO_MEDS[r.c.n]; });
+    if (u >= 3) {
+      html += "<div class='med'><h4>Medicines</h4><p class='why'>Please get checked first rather than self-medicating.</p>" +
+        noMed.map(function (t) { return "<p class='why'>" + t + "</p>"; }).join("") + "</div>";
+    } else if (age !== "adult") {
+      html += "<div class='med'><h4>Medicines</h4><p class='why'>For " + (age === "child" ? "children" : "people above 60") + ", please ask a doctor or pharmacist before giving or taking any medicine.</p></div>";
+    } else if (scored.length) {
+      var seen = {}, list = [];
+      scored.slice(0, 2).forEach(function (r) { (MEDS[r.c.n] || []).forEach(function (m) { if (!seen[m]) { seen[m] = 1; list.push(m); } }); });
+      if (list.length || noMed.length) {
+        html += "<div class='med'><h4>Common over-the-counter options</h4>";
+        if (list.length) html += "<ul>" + list.map(function (m) { return "<li>" + m + "</li>"; }).join("") + "</ul>";
+        noMed.forEach(function (t) { html += "<p class='why'>" + t + "</p>"; });
+        html += "<p class='warn'>" + cautionNote + " Never take antibiotics without a prescription.</p></div>";
+      }
+    }
+    // Hook: apne MediQueue ke queue/token page ka link yahan daal sakte ho
+    var link = window.MQ_BOOKING_URL;
+    if (u >= 2 && link) html += "<a class='link' href='" + link + "'>Book a token in MediQueue</a>";
+    done(html);
+  }
+
+  function toggle(open) {
+    var o = typeof open === "boolean" ? open : !panel.classList.contains("open");
+    panel.classList.toggle("open", o);
+    fab.setAttribute("aria-expanded", o ? "true" : "false");
+    if (o && !bd.innerHTML) form();
+  }
+  fab.onclick = function () { toggle(); };
+  root.querySelector(".x").onclick = function () { toggle(false); };
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") toggle(false); });
+})();
+  </script>
+</body>
+</html>
